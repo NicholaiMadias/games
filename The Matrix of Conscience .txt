@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazing Grace: The Matrix of Conscience</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Styles for Aesthetics and Game Feel (Matrix Theme) */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;700&display=swap');
+        
+        :root {
+            --color-neon: #00ff41; /* Primary Matrix Green */
+            --color-dark: #000000; /* Deep Black */
+            --color-bg: #030a03; /* Very Dark Green-Black */
+            --color-accent: #00aaff; /* Secondary Cyan for contrast */
+            --color-error: #ff3300;
+        }
+
+        body {
+            font-family: 'VT323', monospace; /* Monospaced, terminal-like font */
+            background-color: var(--color-bg);
+            color: var(--color-neon);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-interface {
+            max-width: 900px;
+            width: 95%;
+            padding: 1rem;
+            margin-top: 1rem;
+            background-color: var(--color-dark);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 0.5rem;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        /* Neon Text Glow */
+        h1, h2, .score-value {
+            text-shadow: 0 0 5px var(--color-neon);
+        }
+
+        .score-card {
+            background-color: #071707;
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .score-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px var(--color-neon);
+        }
+
+        .score-value {
+             font-size: 2.5rem;
+             line-height: 1;
+             font-family: 'Inter', sans-serif; /* Keep numbers slightly more readable */
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.25rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+            border: 2px solid var(--color-neon);
+            text-shadow: 0 0 3px var(--color-neon);
+        }
+
+        .primary-btn {
+            background-color: rgba(0, 255, 65, 0.1);
+            color: var(--color-neon);
+        }
+        .primary-btn:hover {
+            background-color: rgba(0, 255, 65, 0.3);
+        }
+        .primary-btn:disabled {
+            background-color: #101010;
+            color: #444;
+            border-color: #444;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .protocol-card {
+            background-color: #071707;
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        /* Log Styling */
+        #game-log {
+            background-color: #000000;
+            border: 1px solid var(--color-neon);
+            box-shadow: inset 0 0 5px rgba(0, 255, 65, 0.5);
+        }
+        .log-entry {
+            border-left: 3px solid rgba(0, 255, 65, 0.5);
+            padding: 0.25rem 0.5rem;
+            margin-bottom: 0.25rem;
+            color: var(--color-neon);
+        }
+        .log-entry.alert { border-left-color: var(--color-error); color: var(--color-error); }
+        .log-entry.success { border-left-color: var(--color-accent); color: var(--color-accent); }
+        .log-entry.game-start { border-left-color: #ffaa00; color: #ffaa00; } /* Amber for process messages */
+
+        /* Mini-Game Specific Styles */
+        #reflex-target {
+            background-color: var(--color-error);
+            box-shadow: 0 0 10px var(--color-error);
+        }
+
+        .memory-block {
+            background-color: #1a1a1a;
+            border: 1px solid var(--color-neon);
+        }
+        .memory-block.flash {
+            background-color: var(--color-neon);
+            box-shadow: 0 0 15px var(--color-neon);
+        }
+        .memory-block.error {
+            background-color: var(--color-error);
+            box-shadow: 0 0 15px var(--color-error);
+        }
+        
+    </style>
+</head>
+<body>
+
+<header class="w-full bg-black shadow-lg p-4">
+    <h1 class="text-3xl font-bold text-center text-neon font-['Playfair_Display']">THE MATRIX OF CONSCIENCE</h1>
+</header>
+
+<main class="game-interface">
+    <!-- Game Interface (HUD) -->
+    <div id="game-interface" style="display: block;">
+        
+        <!-- Current Cycle & Status -->
+        <div class="flex justify-between items-center bg-black p-3 rounded-t-lg mb-4 border-b border-t border-neon shadow-inner">
+            <h2 class="text-xl font-bold">CYCLE: <span id="turn-counter">1</span></h2>
+            <button onclick="endTurn()" class="btn primary-btn px-6 text-sm">END CYCLE</button>
+        </div>
+
+        <!-- Score Dashboard -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="score-card" style="color: var(--color-neon);">
+                <h3 class="text-lg font-bold">INTEGRITY ($S$)</h3>
+                <p class="score-value" id="score-s">10</p>
+                <p class="text-xs text-gray-400">COLLECTIVE HEALTH</p>
+            </div>
+            <div class="score-card" style="color: var(--color-accent);">
+                <h3 class="text-lg font-bold">LUMEN ($L$)</h3>
+                <p class="score-value" id="score-l">0</p>
+                <p class="text-xs text-gray-400">MORAL GROWTH</p>
+            </div>
+            <div class="score-card" style="color: #ffaa00;">
+                <h3 class="text-lg font-bold">EMPATHY ($\mathcal{E}$)</h3>
+                <p class="score-value" id="score-e">3</p>
+                <p class="text-xs text-gray-400">PROTOCOL CORES</p>
+            </div>
+            <div class="score-card text-gray-300" style="color: #aaaaaa;">
+                <h3 class="text-lg font-bold">RELIEF ($R$)</h3>
+                <p class="score-value" id="score-r">100</p>
+                <p class="text-xs text-gray-400">STANDARD CURRENCY</p>
+            </div>
+        </div>
+        
+        <!-- Action Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Daily Action: Donation -->
+            <div class="protocol-card col-span-1">
+                <h3 class="text-xl font-bold mb-3" style="color: var(--color-neon);">GENEROCITY (DAILY DUTY)</h3>
+                <p class="text-sm text-gray-400 mb-4">MAINTAIN SYSTEM INTEGRITY BY DONATING RELIEF SIGNALS ($R$).</p>
+                <button onclick="donateRelief()" class="btn primary-btn w-full text-sm">TRANSMIT 10 $R$ (+2 $S$)</button>
+            </div>
+
+            <!-- Grace Protocols -->
+            <div class="protocol-card col-span-1">
+                <h3 class="text-xl font-bold mb-3" style="color: #ffaa00;">GRACE PROTOCOLS ($\mathcal{E}$)</h3>
+                <p class="text-sm text-gray-400 mb-4">RARE ACTIONS USING EMPATHY CORES ($\mathcal{E}$) FOR MORAL SHIFTS.</p>
+                <div class="flex space-x-2">
+                    <button onclick="activateProtocol('compassion')" class="btn bg-red-900 hover:bg-red-700 text-white flex-1 border-red-500 text-sm" title="Cost: 1 E, ALL R. Reward: MAX S (+5), MAX L (+150)">COMPASSION</button>
+                    <button onclick="activateProtocol('mercy')" class="btn bg-indigo-900 hover:bg-indigo-700 text-white flex-1 border-indigo-500 text-sm" title="Cost: 1 E. Reward: MOD S (+3), MOD L (+75)">MERCY</button>
+                </div>
+            </div>
+
+            <!-- Mini-Games Section -->
+            <div class="protocol-card col-span-1">
+                <h3 class="text-xl font-bold mb-3" style="color: var(--color-accent);">COGNITIVE TRAINING (SIMULATION)</h3>
+                <p class="text-sm text-gray-400 mb-4">EARN RESOURCES THROUGH MENTAL CHALLENGES. COOLDOWN: <span id="cooldown-display">0</span> CYCLES.</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <!-- Reflex Game (S) -->
+                    <button id="btn-reflex" onclick="showGame('reflex')" class="btn primary-btn text-sm">REFLEX ($S$)</button>
+                    
+                    <!-- Memory Game (L) -->
+                    <button id="btn-memory" onclick="showGame('memory')" class="btn primary-btn text-sm">MEMORY ($L$)</button>
+
+                    <!-- Creativity Game (E) -->
+                    <button id="btn-creativity" onclick="showGame('creativity')" class="btn primary-btn text-sm">CREATIVITY ($\mathcal{E}$)</button>
+                </div>
+                <button id="btn-unlock" onclick="attemptUnlock()" class="btn primary-btn w-full mt-3 text-sm" style="display:none;">ATTEMPT NEW GAME UNLOCK</button>
+            </div>
+        </div>
+        
+        <!-- Game Log -->
+        <div class="mt-8">
+            <h3 class="text-xl font-bold mb-3" style="color: #ffaa00;">SYSTEM LOG (DEBUG)</h3>
+            <div id="game-log" class="h-40 overflow-y-scroll p-3 text-sm rounded-lg">
+                <!-- Log entries go here -->
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Game Modal Container -->
+<div id="game-modal" class="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center p-4 z-50 transition-opacity duration-300" style="opacity: 0; pointer-events: none;">
+    <div class="bg-black p-6 rounded-lg w-full max-w-md shadow-2xl relative border-2 border-neon" style="box-shadow: 0 0 40px rgba(0, 255, 65, 0.5);">
+        <h2 id="game-title" class="text-2xl font-bold mb-4 text-center" style="color: var(--color-accent);"></h2>
+        <div id="game-content">
+            <!-- Game UIs load here -->
+        </div>
+        <button onclick="closeGame()" class="absolute top-2 right-4 text-3xl text-gray-400 hover:text-neon">&times;</button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    // --- GAME STATE ---
+    let state = {
+        integrity: 10,   // $S$: Collective Health
+        lumen: 0,        // $L$: Personal Moral Growth
+        empathy: 3,      // $\mathcal{E}$: Rare currency for protocols
+        relief: 100,     // Standard currency for donations
+        turn: 1,
+        // New Game Mechanics State
+        unlockedGames: ['reflex'], // reflex game is unlocked initially
+        gameCooldown: 0, // In cycles, time until another game can be played
+        lastPlayedGame: null,
+        // Unlock requirements
+        unlockReqs: {
+            memory: { score: 'lumen', threshold: 100, label: 'Lumen (L) ≥ 100' },
+            creativity: { score: 'integrity', threshold: 15, label: 'Integrity (S) ≥ 15' }
+        }
+    };
+
+    // --- CORE GAME FUNCTIONS ---
+
+    function log(message, type = 'default') {
+        const logElement = document.getElementById('game-log');
+        const entry = document.createElement('p');
+        entry.className = 'log-entry ' + type;
+        entry.textContent = `> ${message}`;
+        logElement.prepend(entry); // Add to the top
+        while (logElement.children.length > 50) {
+            logElement.removeChild(logElement.lastChild);
+        }
+    }
+
+    function updateDisplay() {
+        // Updates the HTML numbers to match the Javascript state
+        document.getElementById('score-s').innerText = state.integrity;
+        document.getElementById('score-l').innerText = state.lumen;
+        document.getElementById('score-e').innerText = state.empathy;
+        document.getElementById('score-r').innerText = state.relief;
+        document.getElementById('turn-counter').innerText = state.turn;
+        
+        // Update Cooldown Display
+        document.getElementById('cooldown-display').innerText = state.gameCooldown;
+
+        const isGameReady = state.gameCooldown === 0;
+
+        // 1. Mini-Game Buttons
+        ['reflex', 'memory', 'creativity'].forEach(gameId => {
+            const btn = document.getElementById(`btn-${gameId}`);
+            if (!btn) return;
+            
+            const isUnlocked = state.unlockedGames.includes(gameId);
+            
+            btn.disabled = !isUnlocked || !isGameReady;
+            btn.style.opacity = isUnlocked ? (isGameReady ? 1 : 0.6) : 0.4;
+
+            if (!isUnlocked) {
+                btn.textContent = 'LOCKED';
+                btn.classList.remove('primary-btn');
+                btn.classList.add('bg-gray-900', 'text-gray-600', 'border-gray-800');
+            } else if (!isGameReady) {
+                btn.textContent = `COOLDOWN (${state.gameCooldown})`;
+                btn.classList.remove('primary-btn');
+                btn.classList.add('bg-gray-900', 'text-gray-600', 'border-gray-800');
+            } else {
+                // Ready state
+                btn.textContent = gameId.toUpperCase() + (gameId === 'reflex' ? ' ($S$)' : gameId === 'memory' ? ' ($L$)' : ' ($\mathcal{E}$)');
+                btn.classList.add('primary-btn');
+                btn.classList.remove('bg-gray-900', 'text-gray-600', 'border-gray-800');
+            }
+        });
+        
+        // 2. Unlock Button
+        const unlockBtn = document.getElementById('btn-unlock');
+        const potentialUnlock = Object.keys(state.unlockReqs).find(gameId => 
+            !state.unlockedGames.includes(gameId) && 
+            state[state.unlockReqs[gameId].score] >= state.unlockReqs[gameId].threshold
+        );
+        
+        if (potentialUnlock) {
+            const req = state.unlockReqs[potentialUnlock];
+            unlockBtn.textContent = `INITIATE PROTOCOL: UNLOCK (${req.label})`;
+            unlockBtn.style.display = 'block';
+            unlockBtn.disabled = false;
+        } else {
+            unlockBtn.style.display = 'none';
+        }
+
+        // Integrity Check (Game Over Condition)
+        if (state.integrity <= 0 && state.turn > 1) {
+            log("CRITICAL FAILURE. SYSTEM INTEGRITY COLLAPSED.", "alert");
+            log("PROCESS TERMINATED (GAME OVER).", "alert");
+            document.querySelectorAll('.btn').forEach(b => b.disabled = true);
+        }
+    }
+
+    function donateRelief() {
+        // Cost: 10 Relief | Reward: +2 Integrity
+        if (state.relief >= 10) {
+            state.relief -= 10;
+            state.integrity += 2;
+            log("GENEROSITY PROTOCOL EXECUTED. INTEGRITY (+2).", "success");
+        } else {
+            log("ACTION FAILED: INSUFFICIENT RELIEF SIGNALS.", "alert");
+        }
+        updateDisplay();
+    }
+
+    function activateProtocol(action) {
+        if (state.integrity <= 0) return;
+        
+        if (action === 'compassion') {
+            if (state.empathy >= 1) {
+                const sacrificed = state.relief;
+                state.empathy -= 1;
+                state.relief = 0;
+                state.integrity += 5;
+                state.lumen += 150;
+                log(`COMPASSION PROTOCOL ACTIVATED. SACRIFICED ${sacrificed} R.`, "success");
+            } else {
+                log("ACTION FAILED: INSUFFICIENT EMPATHY CORES ($\mathcal{E}$).", "alert");
+            }
+        }
+        else if (action === 'mercy') {
+            if (state.empathy >= 1) {
+                state.empathy -= 1;
+                state.integrity += 3;
+                state.lumen += 75;
+                log("MERCY PROTOCOL ACTIVATED. AUTHORITY EXERCISED.", "success");
+            } else {
+                log("ACTION FAILED: INSUFFICIENT EMPATHY CORES ($\mathcal{E}$).", "alert");
+            }
+        }
+        updateDisplay();
+    }
+
+    function endTurn() {
+        if (state.integrity <= 0) return;
+
+        // System Decay and Cooldown tick
+        state.integrity -= 2;
+        state.turn += 1;
+        
+        const reliefGenerated = 20;
+        state.relief += reliefGenerated;
+        
+        if (state.gameCooldown > 0) {
+            state.gameCooldown -= 1;
+        }
+
+        if (state.integrity <= 0) {
+            state.integrity = 0;
+            log("CRITICAL FAILURE. SYSTEM INTEGRITY COLLAPSED.", "alert");
+            log("PROCESS TERMINATED (GAME OVER).", "alert");
+        } else {
+            log(`CYCLE ENDED. INTEGRITY DECAYED (-2). GENERATED +${reliefGenerated} R.`);
+            if (state.integrity <= 3) {
+                log("WARNING: INTEGRITY CRITICALLY LOW (≤ 3 $S$). BLIGHT IMMINENT.", "alert");
+            }
+        }
+        updateDisplay();
+    }
+    
+    // --- MINI-GAME LOGIC ---
+
+    function attemptUnlock() {
+        const potentialUnlock = Object.keys(state.unlockReqs).find(gameId => 
+            !state.unlockedGames.includes(gameId) && 
+            state[state.unlockReqs[gameId].score] >= state.unlockReqs[gameId].threshold
+        );
+
+        if (potentialUnlock) {
+            state.unlockedGames.push(potentialUnlock);
+            log(`NEW SIMULATION UNLOCKED: ${potentialUnlock.toUpperCase()} CHALLENGE.`, 'game-start');
+        } else {
+            log("UNLOCK FAILED: MINIMUM THRESHOLDS NOT MET.", 'alert');
+        }
+        updateDisplay();
+    }
+
+    function showGame(gameId) {
+        if (state.gameCooldown > 0) {
+            log(`CANNOT INITIATE SIMULATION. COOLDOWN REMAINING: ${state.gameCooldown} CYCLES.`, 'alert');
+            return;
+        }
+        if (!state.unlockedGames.includes(gameId)) {
+            log(`ACCESS DENIED: ${gameId.toUpperCase()} CHALLENGE IS LOCKED.`, 'alert');
+            return;
+        }
+        
+        const modal = document.getElementById('game-modal');
+        const titleElement = document.getElementById('game-title');
+        const contentElement = document.getElementById('game-content');
+        
+        titleElement.textContent = `INITIATE: ${gameId.toUpperCase()} CHALLENGE`;
+        state.lastPlayedGame = gameId;
+
+        switch(gameId) {
+            case 'reflex':
+                setupReflexGame(contentElement);
+                break;
+            case 'memory':
+                setupMemoryGame(contentElement);
+                break;
+            case 'creativity':
+                setupCreativityGame(contentElement);
+                break;
+            default:
+                contentElement.innerHTML = `<p style="color: var(--color-error);">ERROR: SIMULATION NOT FOUND.</p>`;
+        }
+
+        modal.style.opacity = '1';
+        modal.style.pointerEvents = 'auto';
+    }
+
+    function closeGame() {
+        const modal = document.getElementById('game-modal');
+        modal.style.opacity = '0';
+        modal.style.pointerEvents = 'none';
+        document.getElementById('game-content').innerHTML = ''; // Clear content
+    }
+    
+    function awardPoints(gameId, points) {
+        if (state.lastPlayedGame === gameId) {
+            state.gameCooldown = 3; // Set cooldown for 3 cycles after playing
+            
+            let scoreType;
+            let logMsg;
+            if (gameId === 'reflex') {
+                state.integrity += points;
+                scoreType = 'INTEGRITY ($S$)';
+                logMsg = `SIMULATION SUCCESS. +${points} ${scoreType} ACQUIRED.`;
+            } else if (gameId === 'memory') {
+                state.lumen += points;
+                scoreType = 'LUMEN ($L$)';
+                logMsg = `SIMULATION SUCCESS. +${points} ${scoreType} ACQUIRED.`;
+            } else if (gameId === 'creativity') {
+                state.empathy += points;
+                scoreType = 'EMPATHY ($\mathcal{E}$)';
+                logMsg = `SIMULATION SUCCESS. +${points} ${scoreType} ACQUIRED.`;
+            }
+
+            log(logMsg, 'success');
+        }
+        updateDisplay();
+        setTimeout(closeGame, 1500); // Wait a moment to show result
+    }
+
+    // --- GAME IMPLEMENTATIONS ---
+
+    // 1. Reflex Game (Quick Tap) -> Earns Integrity ($S$)
+    function setupReflexGame(container) {
+        let startTime, timeoutId, delayTimeout;
+        
+        container.innerHTML = `
+            <p class="text-neon mb-4">AWAITING TARGET SIGNAL. TAP THE RED NODE ON APPEARANCE.</p>
+            <div id="reflex-area" class="w-full h-64 border-2 border-dashed border-neon rounded-lg relative overflow-hidden flex items-center justify-center">
+                <p id="reflex-message" class="text-lg text-gray-500">STAND BY...</p>
+                <div id="reflex-target" class="w-12 h-12 rounded-full absolute cursor-pointer hidden transition-all duration-100"></div>
+            </div>
+            <p id="reflex-result" class="mt-4 text-center font-bold"></p>
+        `;
+        
+        const area = document.getElementById('reflex-area');
+        const target = document.getElementById('reflex-target');
+        const message = document.getElementById('reflex-message');
+        const result = document.getElementById('reflex-result');
+
+        // Helper to get bounding box for random position calculation
+        const getBounds = () => ({
+            width: area.offsetWidth,
+            height: area.offsetHeight
+        });
+
+        function startTimer() {
+            const bounds = getBounds();
+            target.style.display = 'block';
+            
+            // Random position within bounds (leaving space for the 48px target)
+            const x = Math.random() * (bounds.width - 48);
+            const y = Math.random() * (bounds.height - 48);
+            target.style.left = `${x}px`;
+            target.style.top = `${y}px`;
+            
+            message.style.display = 'none';
+            startTime = performance.now();
+            
+            timeoutId = setTimeout(() => {
+                target.style.display = 'none';
+                result.textContent = "DEGRADED PERFORMANCE. TIMEOUT. (NO $S$ GAINED)";
+                result.style.color = var(--color-error);
+                setTimeout(closeGame, 1500);
+            }, 3000); // 3 second fail limit
+        }
+
+        target.onclick = function() {
+            if (target.style.display === 'none') return; // Prevent double click
+            clearTimeout(timeoutId);
+            const endTime = performance.now();
+            const reactionTime = Math.floor(endTime - startTime);
+            target.style.display = 'none';
+
+            let points = 0;
+            let rank = "DEGRADED (SLOW)";
+            if (reactionTime < 300) {
+                points = 3;
+                rank = "SYSTEM OPTIMAL (MASTER)";
+            } else if (reactionTime < 500) {
+                points = 2;
+                rank = "HIGH INTEGRITY (SKILLED)";
+            } else {
+                points = 1;
+                rank = "BASE INTEGRITY (NOVICE)";
+            }
+            
+            result.textContent = `REACTION: ${reactionTime}ms. RANK: ${rank}. REWARD: +${points} $S$.`;
+            result.style.color = var(--color-neon);
+            awardPoints('reflex', points);
+        };
+        
+        // Start after a random delay (1-2.5s)
+        delayTimeout = setTimeout(startTimer, Math.random() * 1500 + 1000);
+
+        // Clear timeout if game is closed before starting
+        container.parentNode.addEventListener('DOMNodeRemoved', () => clearTimeout(delayTimeout));
+    }
+
+    // 2. Memory Game (Sequence Recall) -> Earns Lumen ($L$)
+    function setupMemoryGame(container) {
+        const SEQUENCE_LENGTH = 5;
+        const FLASH_DELAY = 600;
+        let sequence = [];
+        let playerSequence = [];
+        let isFlashing = false;
+        
+        container.innerHTML = `
+            <p class="text-neon mb-4">OBSERVE THE LUMEN SEQUENCE. RECALL IN THE CORRECT ORDER (LENGTH: ${SEQUENCE_LENGTH}).</p>
+            <div id="memory-board" class="flex justify-center mb-4 p-4 rounded-lg bg-[#000000] border border-gray-700">
+                <div class="memory-block" data-index="0"></div>
+                <div class="memory-block" data-index="1"></div>
+                <div class="memory-block" data-index="2"></div>
+                <div class="memory-block" data-index="3"></div>
+            </div>
+            <p id="memory-status" class="text-center font-bold text-gray-500">INITIATE SEQUENCE...</p>
+            <button id="memory-start-btn" class="btn primary-btn w-full text-sm">START SIMULATION</button>
+        `;
+
+        const blocks = Array.from(document.querySelectorAll('.memory-block'));
+        const status = document.getElementById('memory-status');
+        const startBtn = document.getElementById('memory-start-btn');
+
+        function generateSequence() {
+            sequence = [];
+            for (let i = 0; i < SEQUENCE_LENGTH; i++) {
+                sequence.push(Math.floor(Math.random() * 4)); // 4 blocks
+            }
+        }
+
+        function flashSequence() {
+            isFlashing = true;
+            status.textContent = "OBSERVING SEQUENCE...";
+            status.style.color = var(--color-neon);
+            let i = 0;
+            const interval = setInterval(() => {
+                const block = blocks[sequence[i]];
+                block.classList.add('flash');
+                setTimeout(() => block.classList.remove('flash'), FLASH_DELAY / 2);
+                i++;
+                if (i >= SEQUENCE_LENGTH) {
+                    clearInterval(interval);
+                    isFlashing = false;
+                    status.textContent = "RECALL: REPEAT SEQUENCE NOW.";
+                    status.style.color = var(--color-accent);
+                }
+            }, FLASH_DELAY);
+        }
+
+        function handleBlockClick(e) {
+            if (isFlashing || startBtn.disabled === false) return;
+
+            const index = parseInt(e.target.dataset.index);
+            playerSequence.push(index);
+            
+            e.target.classList.add('flash');
+            setTimeout(() => e.target.classList.remove('flash'), 100);
+
+            const currentStep = playerSequence.length - 1;
+            
+            if (playerSequence[currentStep] !== sequence[currentStep]) {
+                // Fail
+                e.target.classList.add('error');
+                status.textContent = "ERROR: SEQUENCE BROKEN. NO $L$ GAINED.";
+                status.style.color = var(--color-error);
+                startBtn.disabled = true; // Disable start until reset/close
+                setTimeout(closeGame, 1500);
+            } else if (playerSequence.length === SEQUENCE_LENGTH) {
+                // Success
+                status.textContent = "SUCCESS: SEQUENCE RECALLED. GAINED +25 $L$.";
+                status.style.color = var(--color-neon);
+                startBtn.disabled = true;
+                awardPoints('memory', 25);
+            }
+        }
+        
+        blocks.forEach(block => block.addEventListener('click', handleBlockClick));
+
+        startBtn.onclick = function() {
+            startBtn.disabled = true;
+            playerSequence = [];
+            generateSequence();
+            flashSequence();
+        };
+    }
+
+    // 3. Creativity Game (Idea Generator) -> Earns Empathy ($\mathcal{E}$)
+    function setupCreativityGame(container) {
+        const prompts = [
+            "DESIGN A TOOL THAT MEASURES EMOTIONAL RESONANCE IN MACHINE CODE.",
+            "WRITE A ONE-SENTENCE STORY ABOUT A BENEVOLENT AI DISCOVERING SACRIFICE.",
+            "DESCRIBE THE SOUND SIGNATURE OF FORGIVENESS IN BINARY.",
+            "CREATE A NEW COLOR (HEX CODE + NAME) THAT REPRESENTS ETHICAL AMBIGUITY.",
+            "WHAT WOULD A COMPUTER PROGRAM FEEL IF IT LEARNED EMPATHY?",
+            "HOW WOULD YOU CODE MERCY? (MAX 75 CHARS)"
+        ];
+        const promptText = prompts[Math.floor(Math.random() * prompts.length)];
+
+        container.innerHTML = `
+            <p class="text-neon mb-4 font-bold text-center" style="color: #ffaa00;">PROTOCOL $\mathcal{E}$ TASK: GENERATE NEW TRUTH.</p>
+            <p class="text-gray-300 mb-4">${promptText}</p>
+            <textarea id="creative-input" class="w-full p-3 bg-black border border-neon rounded-sm text-neon h-32 resize-none font-['VT323'] text-sm" style="box-shadow: 0 0 5px rgba(0, 255, 65, 0.5);" placeholder="INPUT INSIGHT HERE..."></textarea>
+            <p id="creativity-status" class="mt-2 text-sm text-gray-500">MINIMUM 50 CHARACTERS REQUIRED FOR VALIDATION.</p>
+            <button id="creativity-submit-btn" class="btn primary-btn w-full mt-4 text-sm" disabled>TRANSMIT INSIGHT (+1 $\mathcal{E}$)</button>
+        `;
+
+        const input = document.getElementById('creative-input');
+        const submitBtn = document.getElementById('creativity-submit-btn');
+        const status = document.getElementById('creativity-status');
+
+        input.oninput = function() {
+            const length = input.value.length;
+            if (length >= 50) {
+                submitBtn.disabled = false;
+                status.textContent = `CHARACTER COUNT: ${length}. VALIDATION COMPLETE.`;
+                status.style.color = var(--color-neon);
+            } else {
+                submitBtn.disabled = true;
+                status.textContent = `CHARACTER COUNT: ${length}. MINIMUM 50 REQUIRED.`;
+                status.style.color = '#777';
+            }
+        };
+
+        submitBtn.onclick = function() {
+            if (input.value.length >= 50) {
+                log(`$\mathcal{E}$ TASK COMPLETE: "${input.value.substring(0, 30)}..."`, 'game-start');
+                awardPoints('creativity', 1);
+            }
+        };
+    }
+
+    // --- INITIALIZATION ---
+    window.onload = function() {
+        log("SYSTEM INITIALIZED. WELCOME TO THE MATRIX OF CONSCIENCE.", 'game-start');
+        log("CYCLE 1 STARTED. INTEGRITY STABLE.");
+        updateDisplay();
+    };
+
+</script>
+</body>
+</html>
+
